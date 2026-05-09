@@ -1,0 +1,102 @@
+version: "3.9"
+
+services:
+  # ── Infrastructure ──────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: ["redis_data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_DB: meridian
+      POSTGRES_USER: meridian
+      POSTGRES_PASSWORD: meridian
+    ports: ["5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meridian"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  elasticsearch:
+    image: elasticsearch:8.16.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports: ["9200:9200"]
+    volumes: ["es_data:/usr/share/elasticsearch/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  neo4j:
+    image: neo4j:5.26-community
+    environment:
+      NEO4J_AUTH: neo4j/meridian_password
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "7474:7474"  # Browser
+      - "7687:7687"  # Bolt
+    volumes: ["neo4j_data:/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -O /dev/null -q http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Application ─────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports: ["8000:8000"]
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      NEO4J_URI: bolt://neo4j:7687
+      DATABASE_URL: postgresql://meridian:meridian@postgres:5432/meridian
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      NEO4J_URI: bolt://neo4j:7687
+      DATABASE_URL: postgresql://meridian:meridian@postgres:5432/meridian
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A backend.worker.celery_app worker --loglevel=info --concurrency=4
+
+volumes:
+  redis_data:
+  postgres_data:
+  es_data:
+  neo4j_data:

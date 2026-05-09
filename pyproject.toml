@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "meridian"
+version = "0.1.0"
+description = "Financial Research Copilot — Advanced Agentic RAG"
+requires-python = ">=3.12"
+dependencies = [
+    # Anthropic
+    "anthropic>=0.40.0",
+    # LangChain / LangGraph
+    "langchain>=0.3.0",
+    "langchain-anthropic>=0.3.0",
+    "langgraph>=0.2.0",
+    # Embeddings
+    "voyageai>=0.3.0",
+    # Vector store
+    "pinecone[grpc]>=5.0.0",
+    # Document processing
+    "unstructured[pdf,xlsx]>=0.15.0",
+    "pdfplumber>=0.11.0",
+    "camelot-py[cv]>=0.11.0",
+    "python-xbrl>=1.0.0",
+    "trafilatura>=1.12.0",
+    # NLP
+    "spacy>=3.8.0",
+    "sentence-transformers>=3.3.0",
+    # API
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sse-starlette>=2.1.0",
+    # Data
+    "pandas>=2.2.0",
+    "numpy>=2.0.0",
+    # Database clients
+    "elasticsearch>=8.16.0",
+    "neo4j>=5.26.0",
+    "redis>=5.2.0",
+    "psycopg2-binary>=2.9.0",
+    # HTTP
+    "httpx>=0.28.0",
+    "aiohttp>=3.11.0",
+    # Config
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "python-dotenv>=1.0.0",
+    # Queue
+    "celery>=5.4.0",
+    # Utilities
+    "tenacity>=9.0.0",
+    "rich>=13.9.0",
+    "structlog>=24.4.0",
+    "tiktoken>=0.8.0",
+    "matplotlib>=3.9.0",
+    "plotly>=5.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-httpx>=0.32.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
